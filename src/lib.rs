@@ -1,7 +1,7 @@
 mod config;
 pub use crate::config::{
-    CommonConfig, DepembedsConfig, LossType, ModelType, SimpleVocabConfig, SkipGramConfig,
-    SubwordVocabConfig,
+    BucketConfig, CommonConfig, DepembedsConfig, LossType, ModelType, NGramConfig,
+    SimpleVocabConfig, SkipGramConfig, SubwordVocabConfig,
 };
 
 mod deps;
@@ -10,10 +10,12 @@ pub use crate::deps::{DepIter, Dependency, DependencyIterator};
 pub(crate) mod dep_trainer;
 pub use crate::dep_trainer::DepembedsTrainer;
 
-pub(crate) mod idx;
+pub(crate) mod hogwild;
 
-mod io;
-pub use crate::io::{SentenceIterator, WriteModelBinary, WriteModelText, WriteModelWord2Vec};
+pub mod idx;
+
+pub mod io;
+pub use io::{SentenceIterator, WriteModelBinary, WriteModelText, WriteModelWord2Vec};
 
 pub(crate) mod loss;
 
@@ -21,8 +23,6 @@ pub(crate) mod sampling;
 
 mod sgd;
 pub use crate::sgd::SGD;
-
-pub(crate) mod subword;
 
 mod train_model;
 pub use crate::train_model::{TrainModel, Trainer};
@@ -35,4 +35,6 @@ pub(crate) mod util;
 pub(crate) mod vec_simd;
 
 mod vocab;
-pub use crate::vocab::{CountedType, SimpleVocab, SubwordVocab, Vocab, VocabBuilder, Word};
+pub use crate::vocab::{
+    simple::SimpleVocab, subword::SubwordVocab, CountedType, Vocab, VocabBuilder, Word,
+};

@@ -1,24 +1,24 @@
-% FF-TRAIN-SKIPGRAM(1)
+% FINALFRONTIER-SKIPGRAM(1)
 % Daniel de Kok
 % Sep 8, 2018
 
 NAME
 ====
 
-**ff-train-skipgram** -- train word embeddings with subword representations
+**finalfrontier skipgram** -- train word embeddings with subword representations
 
 SYNOPSIS
 ========
 
-**ff-train-skipgram** [*options*] *corpus* *output*
+**finalfrontier skipgram** [*options*] *corpus* *output*
 
 DESCRIPTION
 ===========
 
-The **ff-train-skipgram** trains word embeddings using data from a *corpus*. The
-corpus should have tokens separated by spaces and sentences separated by
-newlines. After training, the embeddings are written to *output* in the
-finalfusion format.
+The **finalfrontier skipgram** subcommand trains word embeddings using data
+from a *corpus*. The corpus should have tokens separated by spaces and
+sentences separated by newlines. After training, the embeddings are written to
+*output* in the finalfusion format.
 
 OPTIONS
 =======
@@ -85,23 +85,47 @@ OPTIONS
     suited for syntax-oriented tasks.
 
     The dependency embeddings model is supported by the separate
-    `ff-train-deps`(1) utility.
+    `finalfrontier deps`(1) subcommand.
 
     The default model is *skipgram*.
 
-`--no_subwords`
+`--ngram_mincount` *FREQ*
 
-:   Train embeddings without subword information. This option overrides
-arguments for `buckets`, `minn` and `maxn`.
+:   The minimum n-gram frequency. n-grams occurring fewer than *FREQ*
+    times are excluded from training. This option is only applicable
+    with the *ngrams* argument of the `subwords` option.
 
 `--ns` *FREQ*
 
 :   The number of negatives to sample per positive example. Default: 5
 
+`--subwords` *SUBWORDS*
+
+:   The type of subword embeddings to train. The possible types are
+    *buckets*, *ngrams*, and *none*. Subword embeddings are used to
+    compute embeddings for unknown words by summing embeddings of
+    n-grams within unknown words.
+
+    The *none* type does not use subwords. The resulting model will
+    not be able assign an embeddings to unknown words.
+
+    The *ngrams* type stores subword n-grams explicitly. The included
+    n-gram lengths are specified using the `minn` and `maxn`
+    options. The frequency threshold for n-grams is configured with
+    the `ngram_mincount` option.
+
+    The *buckets* type maps n-grams to buckets using the FNV1 hash.
+    The considered n-gram lengths are specified using the `minn` and
+    `maxn` options.  The number of buckets is controlled with the
+    `buckets` option.
+
 `--threads` *N*
 
-:   The number of thread to use during training for parallelization. The
-    default is to use half of the logical CPUs of the machine.
+:   The number of thread to use during training for
+    parallelization. The default is to use half of the logical CPUs of
+    the machine, capped at 20 threads. Increasing the number of
+    threads increases the probability of update collisions, requiring
+    more epochs to reach the same loss.
 
 `--zipf` *EXP*
 
@@ -113,15 +137,15 @@ EXAMPLES
 
 Train embeddings on *dewiki.txt* using the skip-gram model:
 
-    ff-train-skipgram dewiki.txt dewiki-skipgram.bin
+    finalfrontier skipgram dewiki.txt dewiki-skipgram.bin
 
 Train embeddings with dimensionality 200 on *dewiki.txt* using the
 structured skip-gram model with a context window of 5 tokens:
 
-    ff-train-skipgram --model structgram --context 5 --dims 200 \
+    finalfrontier skipgram --model structgram --context 5 --dims 200 \
       dewiki.txt dewiki-structgram.bin
 
 SEE ALSO
 ========
 
-`ff-train-deps`(1)
+`finalfrontier`(1), `finalfrontier-deps`(1)

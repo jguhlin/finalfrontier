@@ -1,24 +1,24 @@
-% FF-TRAIN-DEPS(1) % Daniel de Kok, Sebastian Pütz % Apr 6, 2019
+% FINALFRONTIER-DEPS(1) % Daniel de Kok, Sebastian Pütz % Apr 6, 2019
 
 NAME
 ====
 
-**ff-train-deps** -- train dependency-based word embeddings with subword
+**finalfrontier deps** -- train dependency-based word embeddings with subword
 representations
 
 SYNOPSIS
 ========
 
-**ff-train-deps** [*options*] *corpus* *output*
+**finalfrontier deps** [*options*] *corpus* *output*
 
 DESCRIPTION
 ===========
 
-The **ff-train-deps** trains dependency based word embeddings (Levy and Goldberg,
-2014) using data from a *corpus* in CONLL-X format. The corpus contains
-sentences seperated by empty lines. Each sentence needs to be annotated with a
-dependency graph. After training, the embeddings are written to *output* in the
-finalfusion format.
+The **finalfrontier-deps** subcommand trains dependency based word embeddings
+(Levy and Goldberg, 2014) using data from a *corpus* in CONLL-X format. The
+corpus contains sentences seperated by empty lines. Each sentence needs to be
+annotated with a dependency graph. After training, the embeddings are written
+to *output* in the finalfusion format.
 
 OPTIONS
 =======
@@ -41,17 +41,17 @@ discarded during training. The default context discard threshold is *1e-4*.
 :   The minimum count controls discarding of infrequent contexts. Contexts
 occuring fewer than *FREQ* times are not considered during training.  The
 default minimum count is 5.
-    
-`--dims` *DIMS*
-
-:   The dimensionality of the trained word embeddings. The default
-dimensionality is 300.
 
 `--dependency_depth` *DEPTH*
 
 :   Dependency contexts up to *DEPTH* distance from the focus word in the
 dependency graph will be used to learn the representation of the focus word. The
 default depth is *1*.
+
+`--dims` *DIMS*
+
+:   The dimensionality of the trained word embeddings. The default
+dimensionality is 300.
 
 `--discard` *THRESHOLD*
 
@@ -83,14 +83,15 @@ minimum count is 5.
 
 :   The minimum n-gram length for subword representations. Default: 3
 
+`--ngram_mincount` *FREQ*
+
+:   The minimum n-gram frequency. n-grams occurring fewer than *FREQ*
+    times are excluded from training. This option is only applicable
+    with the *ngrams* argument of the `subwords` option.
+
 `--normalize_contexts`
 
 :   Normalize the attached form in the dependency contexts.
-
-`--no_subwords`
-
-:   Train embeddings without subword information. This option overrides
-arguments for `buckets`, `minn` and `maxn`.
 
 `--ns` *FREQ*
 
@@ -102,9 +103,32 @@ arguments for `buckets`, `minn` and `maxn`.
 
 `--threads` *N*
 
-:   The number of thread to use during training for parallelization. The default
-is to use half of the logical CPUs of the machine.
+:   The number of thread to use during training for
+    parallelization. The default is to use half of the logical CPUs of
+    the machine, capped at 20 threads. Increasing the number of
+    threads increases the probability of update collisions, requiring
+    more epochs to reach the same loss.
     
+`--subwords` *SUBWORDS*
+
+:   The type of subword embeddings to train. The possible types are
+    *buckets*, *ngrams*, and *none*. Subword embeddings are used to
+    compute embeddings for unknown words by summing embeddings of
+    n-grams within unknown words.
+
+    The *none* type does not use subwords. The resulting model will
+    not be able assign an embeddings to unknown words.
+
+    The *ngrams* type stores subword n-grams explicitly. The included
+    n-gram lengths are specified using the `minn` and `maxn`
+    options. The frequency threshold for n-grams is configured with
+    the `ngram_mincount` option.
+
+    The *buckets* type maps n-grams to buckets using the FNV1 hash.
+    The considered n-gram lengths are specified using the `minn` and
+    `maxn` options.  The number of buckets is controlled with the
+    `buckets` option.
+
 `--untyped_deps`
 
 :   Only use the word of the attached token in the dependency relation as
@@ -126,11 +150,15 @@ EXAMPLES
 Train embeddings on *dewiki.txt* using the dependency model with default
 parameters:
 
-    ff-train-deps dewiki.conll dewiki-deps.bin
+    finalfrontier deps dewiki.conll dewiki-deps.bin
 
 Train embeddings with dimensionality 200 on *dewiki.conll* using the dependency
 model from contexts with depth up to 2:
 
-    ff-train-deps --depth 2 --normalize --dims 200 \
+    finalfrontier deps --depth 2 --normalize --dims 200 \
       dewiki.conll dewiki-deps.bin
 
+SEE ALSO
+========
+
+`finalfrontier`(1), `finalfrontier-skipgram`(1)

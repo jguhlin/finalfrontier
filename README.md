@@ -17,21 +17,24 @@ word embeddings. finalfrontier currently has the following features:
   * Noise contrastive estimation (Gutmann and Hyvärinen, 2012)
   * Subword representations (Bojanowski et al., 2016)
   * Hogwild SGD (Recht et al., 2011)
+  * Quantized embeddings through the [`finalfusion
+    quantize`](https://github.com/finalfusion/finalfusion-utils)
+    command.
 
-This is an early release of finalfrontier, we are planning to add more
-features in the future. The trained embeddings are stored in `finalfusion`
-format, which can be read and used with the
-[finalfusion](https://github.com/finalfusion/finalfusion-rust) crate and the
-[finalfusion](https://github.com/finalfusion/finalfusion-python) Python
-module.
+The trained embeddings are stored in `finalfusion` format, which can
+be read and used with the
+[finalfusion](https://github.com/finalfusion/finalfusion-rust) crate
+and the
+[finalfusion](https://github.com/finalfusion/finalfusion-python)
+Python module.
 
 ## Where to go from here
 
   * [Installation](docs/INSTALL.md)
   * [Quickstart](docs/QUICKSTART.md)
   * Manual pages:
-    - [ff-train-skipgram(1)](man/ff-train-skipgram.1.md) — train word
+    - [finalfrontier-skipgram(1)](man/finalfrontier-skipgram.1.md) — train word
       embeddings with the (structured) skip-gram model
-    - [ff-train-deps(1)](man/ff-train-skipgram.1.md) — train word embeddings with dependency contexts
+    - [finalfrontier-deps(1)](man/finalfrontier-deps.1.md) — train word embeddings with dependency contexts
   * [finalfusion crate](https://github.com/finalfusion/finalfusion-rust)
   * [Python module](https://github.com/finalfusion/finalfusion-python)

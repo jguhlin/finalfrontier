@@ -2,19 +2,21 @@ use std::io::{Seek, Write};
 use std::sync::Arc;
 
 use failure::{err_msg, Error};
-use finalfusion::vocab::VocabWrap;
-use finalfusion::{
-    embeddings::Embeddings, io::WriteEmbeddings, metadata::Metadata, norms::NdNorms,
-    storage::NdArray,
-};
-use hogwild::HogwildArray2;
+use finalfusion::io::WriteEmbeddings;
+use finalfusion::metadata::Metadata;
+use finalfusion::norms::NdNorms;
+use finalfusion::prelude::{Embeddings, VocabWrap};
+use finalfusion::storage::NdArray;
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2, ArrayViewMut1, Axis};
+use ndarray_rand::rand_distr::Uniform;
 use ndarray_rand::RandomExt;
-use rand::distributions::Uniform;
 use serde::Serialize;
 use toml::Value;
 
+use crate::hogwild::HogwildArray2;
 use crate::idx::WordIdx;
+use crate::io::TrainInfo;
+use crate::util::VersionInfo;
 use crate::vec_simd::{l2_normalize, scale, scaled_add};
 use crate::{CommonConfig, Vocab, WriteModelBinary};
 
@@ -123,7 +125,7 @@ impl<T> TrainModel<T> {
         I: WordIdx,
         &'a I: IntoIterator<Item = u64>,
     {
-        let mut embed = Array1::zeros((embeds.cols(),));
+        let mut embed = Array1::zeros((embeds.ncols(),));
         let len = indices.len();
         for idx in indices {
             scaled_add(
@@ -182,10 +184,17 @@ where
     for<'a> &'a V::IdxType: IntoIterator<Item = u64>,
     M: Serialize,
 {
-    fn write_model_binary(self, write: &mut W) -> Result<(), Error> {
+    fn write_model_binary(self, write: &mut W, mut train_info: TrainInfo) -> Result<(), Error> {
         let (trainer, mut input_matrix) = self.into_parts()?;
-
-        let metadata = Metadata(Value::try_from(trainer.to_metadata())?);
+        let mut metadata = Value::try_from(trainer.to_metadata())?;
+        let build_info = Value::try_from(VersionInfo::new())?;
+        let metadata_table = metadata
+            .as_table_mut()
+            .ok_or_else(|| err_msg("Metadata has to be 'Table'."))?;
+        metadata_table.insert("version_info".to_string(), build_info);
+        train_info.set_end();
+        let train_info = Value::try_from(train_info)?;
+        metadata_table.insert("training_info".to_string(), train_info);
 
         // Compute and write word embeddings.
         let mut norms = vec![0f32; trainer.input_vocab().len()];
@@ -202,10 +211,12 @@ where
         }
 
         let vocab: VocabWrap = trainer.try_into_input_vocab()?.into();
-        let storage = NdArray(input_matrix);
-        let norms = NdNorms(Array1::from_vec(norms));
+        let storage = NdArray::new(input_matrix);
+        let norms = NdNorms::new(Array1::from(norms));
 
-        Embeddings::new(Some(metadata), vocab, storage, norms).write_embeddings(write)
+        Embeddings::new(Some(Metadata::new(metadata)), vocab, storage, norms)
+            .write_embeddings(write)
+            .map_err(|err| err.into())
     }
 }
 
@@ -263,17 +274,18 @@ pub trait NegativeSamples {
 
 #[cfg(test)]
 mod tests {
+    use finalfusion::subword::FinalfusionHashIndexer;
     use ndarray::Array2;
-    use rand::FromEntropy;
+    use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
 
     use super::TrainModel;
+    use crate::config::SubwordVocabConfig;
     use crate::idx::WordWithSubwordsIdx;
     use crate::skipgram_trainer::SkipgramTrainer;
     use crate::util::all_close;
     use crate::{
-        CommonConfig, LossType, ModelType, SkipGramConfig, SubwordVocab, SubwordVocabConfig,
-        VocabBuilder,
+        BucketConfig, CommonConfig, LossType, ModelType, SkipGramConfig, SubwordVocab, VocabBuilder,
     };
 
     const TEST_COMMON_CONFIG: CommonConfig = CommonConfig {
@@ -290,12 +302,12 @@ mod tests {
         model: ModelType::SkipGram,
     };
 
-    const VOCAB_CONF: SubwordVocabConfig = SubwordVocabConfig {
-        buckets_exp: 21,
+    const VOCAB_CONF: SubwordVocabConfig<BucketConfig> = SubwordVocabConfig {
         discard_threshold: 1e-4,
         min_count: 2,
         max_n: 6,
         min_n: 3,
+        indexer: BucketConfig { buckets_exp: 21 },
     };
 
     #[test]
@@ -306,9 +318,9 @@ mod tests {
         let common_config = TEST_COMMON_CONFIG.clone();
         let skipgram_config = TEST_SKIP_CONFIG.clone();
         // We just need some bogus vocabulary
-        let mut builder: VocabBuilder<SubwordVocabConfig, String> = VocabBuilder::new(vocab_config);
+        let mut builder: VocabBuilder<_, String> = VocabBuilder::new(vocab_config);
         builder.count("bla".to_string());
-        let vocab: SubwordVocab = builder.into();
+        let vocab: SubwordVocab<_, FinalfusionHashIndexer> = builder.into();
 
         let input = Array2::from_shape_vec((2, 3), vec![1., 2., 3., 4., 5., 6.])
             .unwrap()
